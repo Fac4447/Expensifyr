@@ -52,9 +52,11 @@ gcloud services enable Cloudbulid.googleapis.com
 ## Deploy to Cloud Run
 
 > Navigate to your project directory
+
 cd Expensifyr
 
 > Deploy directly to Cloud Run
+
 gcloud run deploy Expensifyr \
   --source . \
   --platform managed \
