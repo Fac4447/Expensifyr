@@ -3,12 +3,15 @@
 ## Set Up Google Cloud Project
 
 > Login to Google Cloud
+
 gcloud auth login
 
 > Set your project ID
+
 gcloud config set project YOUR_PROJECT_ID
 
 > Enable required APIs
+
 gcloud services enable run.googleapis.com
 gcloud services enable vision.googleapis.com
 gcloud services enable firestore.googleapis.com
