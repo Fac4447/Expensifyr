@@ -69,6 +69,6 @@ gcloud run deploy Expensifyr \
 
 > After deploying the app
 
-In Google Cloud Console, search for Cloud Run
-You should see Expensifyr as one of the containers, Select it
-There you should see a URL that you can click to access the App on the web
+1. In Google Cloud Console, search for Cloud Run
+2. You should see Expensifyr as one of the containers, Select it
+3. There you should see a URL that you can click to access the App on the web
