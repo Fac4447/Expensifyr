@@ -12,10 +12,10 @@ gcloud config set project YOUR_PROJECT_ID
 
 > Enable required APIs
 
-gcloud services enable run.googleapis.com
-gcloud services enable vision.googleapis.com
-gcloud services enable firestore.googleapis.com
-gcloud services enable Cloudbulid.googleapis.com
+1. gcloud services enable run.googleapis.com
+2. gcloud services enable vision.googleapis.com
+3. gcloud services enable firestore.googleapis.com
+4. gcloud services enable Cloudbulid.googleapis.com
 
 
 ## Create a Service Account
