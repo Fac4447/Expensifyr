@@ -65,5 +65,10 @@ gcloud run deploy Expensifyr \
   --memory 512Mi \
   --timeout 300
 
-## Once setup is complete Refer to this video
-https://youtu.be/NuttwQlYYfQ
+## Running the App
+
+> After deploying the app
+
+In Google Cloud Console, search for Cloud Run
+You should see Expensifyr as one of the containers, Select it
+There you should see a URL that you can click to access the App on the web
