@@ -57,7 +57,7 @@ cd Expensifyr
 
 > Deploy directly to Cloud Run
 
-gcloud run deploy Expensifyr \
+gcloud run deploy expensifyr \
   --source . \
   --platform managed \
   --region (Region Selection for Firestore) \
