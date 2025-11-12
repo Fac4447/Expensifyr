@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receipt Scanner</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📄 Receipt Scanner</h1>
+            <p>Upload receipts and track your expenses</p>
+        </div>
+        
+        <div class="card">
+            <div class="upload-section">
+                <h2 style="margin-bottom: 20px; color: #333;">Upload Receipt</h2>
+                
+                <div class="file-input-wrapper">
+                    <input type="file" id="receiptFile" accept="image/*">
+                    <label for="receiptFile" class="file-label">
+                        📁 Choose Receipt Image
+                    </label>
+                </div>
+                
+                <div class="file-name" id="fileName">No file chosen</div>
+                
+                <div style="margin-top: 20px;">
+                    <button class="button" id="uploadBtn" onclick="uploadReceipt()" disabled>
+                        🚀 Upload & Scan
+                    </button>
+                    <button class="button secondary" onclick="getSummary()">
+                        📊 View Summary
+                    </button>
+                </div>
+                
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 10px; color: #666;">Processing receipt...</p>
+                </div>
+                
+                <div class="error" id="error"></div>
+                
+                <div class="result" id="result">
+                    <h3>✅ Receipt Processed Successfully</h3>
+                    <div class="receipt-info" id="receiptInfo"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card" style="display: none;" id="summaryCard">
+            <h2 style="margin-bottom: 20px; color: #333;">📊 Receipts Summary</h2>
+            <div class="summary-stats" id="summaryStats"></div>
+            <div class="receipts-list" id="receiptsList"></div>
+        </div>
+    </div>
+
+    <script src="/app.js"></script>
+</body>
+</html> 
