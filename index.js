@@ -1,17 +1,23 @@
-// index.js - Main Express server with web interface
 const express = require('express');
 const multer = require('multer');
 const vision = require('@google-cloud/vision');
-const { Firestore } = require('@google-cloud/firestore');
+const admin = require('firebase-admin');
 const path = require('path');
 const fs = require('fs').promises;
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
 
-// Initialize clients
+// Initialize Clients
 const visionClient = new vision.ImageAnnotatorClient();
-const firestore = new Firestore();
+
+// Initialize Firebase Admin SDK
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
+const firestore = admin.firestore();
+const FieldValue = admin.firestore.FieldValue;
+global.FieldValue = FieldValue;
 
 // Middleware
 app.use(express.json());
@@ -237,7 +243,71 @@ async function extractReceiptUsingLayout(imagePath) {
     throw err;
   }
 }
+async function updateStoreTotals(storeName, receiptTotal) {
+  try {
+    console.log('updateStoreTotals called:', { storeName, receiptTotal });
 
+    // CLEAN AND VALIDATE
+    const cleanName = String(storeName || 'Unknown Store').trim();
+    if (!cleanName) {
+      console.error('Empty store name, skipping totals update');
+      return;
+    }
+
+    const totalStr = String(receiptTotal || 0).replace(/[$\,]/g, '');
+    const amount = parseFloat(totalStr);
+
+    if (isNaN(amount) || amount <= 0) {
+      console.error('Invalid amount:', receiptTotal);
+      return;
+    }
+
+    const storeRef = firestore.collection('storeTotals').doc(cleanName);
+
+    // TRY TO INCREMENT — WILL FAIL IF DOC DOESN'T EXIST
+    try {
+      await storeRef.update({
+        totalSpent: FieldValue.increment(amount)
+      });
+      console.log('Successfully incremented total for:', cleanName);
+    } catch (err) {
+      if (err.message.includes('NOT_FOUND') || err.code === 5) {
+        console.log('First time seeing store:', cleanName, '→ creating document');
+        await storeRef.set({
+          totalSpent: amount,
+          percentOfTotal: 0
+        });
+      } else {
+        throw err;
+      }
+    }
+
+    // RECALCULATE PERCENTAGES
+    const snapshot = await firestore.collection('storeTotals').get();
+    let grandTotal = 0;
+    const updates = [];
+
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const spent = data.totalSpent || 0;
+      grandTotal += spent;
+      updates.push({ ref: doc.ref, spent });
+    });
+
+    if (updates.length > 0) {
+      const batch = firestore.batch();
+      updates.forEach(({ ref, spent }) => {
+        const percent = grandTotal > 0 ? (spent / grandTotal) * 100 : 0;
+        batch.set(ref, { percentOfTotal: percent }, { merge: true });
+      });
+      await batch.commit();
+      console.log('Percentages updated. Grand total:', grandTotal.toFixed(2));
+    }
+
+  } catch (err) {
+    console.error('updateStoreTotals FAILED:', err);
+  }
+}
 // Serve the main web page
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -260,12 +330,29 @@ app.post('/upload-receipt', upload.single('receipt'), async (req, res) => {
       return res.status(400).json({ error: 'Could not extract receipt data' });
     }
 
-    // Store in Firestore
+    let receiptDateTimestamp;
+    if (receiptData.date) {
+      // Handle formats like "10/25/2025" or "2025-11-19"
+      const parsed = new Date(receiptData.date);
+      receiptDateTimestamp = isNaN(parsed.getTime()) 
+        ? admin.firestore.Timestamp.now() 
+        : admin.firestore.Timestamp.fromDate(parsed);
+    } else {
+      receiptDateTimestamp = admin.firestore.Timestamp.now();
+    }
+
     const docRef = await firestore.collection('receipts').add({
       ...receiptData,
-      uploadedAt: new Date().toISOString(),
+      date: receiptDateTimestamp,        // ← REAL TIMESTAMP
+      dateString: receiptData.date,      // ← keep original for display
+      uploadedAt: admin.firestore.Timestamp.now(),
       userId: req.body.userId || 'anonymous'
     });
+
+    updateStoreTotals(receiptData.storeName || 'Unknown', receiptData.total)
+      .catch(err => {
+        console.error('updateStoreTotals threw but upload continues:', err);
+      });
 
     // Clean up uploaded file
     await fs.unlink(imagePath);
@@ -302,7 +389,23 @@ app.get('/receipts', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch receipts' });
   }
 });
-
+app.get('/api/store-breakdown', async (req, res) => {
+  const snapshot = await firestore.collection('storeTotals').get();
+  const result = [];
+  snapshot.forEach(doc => result.push({ store: doc.id, ...doc.data() }));
+  res.json(result);
+});
+app.get('/api/store-totals', async (req, res) => {
+  try {
+    const snapshot = await firestore.collection('storeTotals').get();
+    const stores = [];
+    snapshot.forEach(doc => stores.push({ store: doc.id, ...doc.data() }));
+    res.json({ success: true, stores });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Failed to load store totals' });
+  }
+});
 // Get single receipt
 app.get('/receipts/:id', async (req, res) => {
   try {

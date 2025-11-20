@@ -33,29 +33,109 @@
                     <button class="button secondary" onclick="getSummary()">
                         📊 View Summary
                     </button>
-                </div>
-                
+                    <button class="button secondary" onclick="showSection('storeTotalsCard')">
+                        🏪 View Store Totals
+                    </button>
+                    <button class="button secondary" onclick="showSection('monthlyChartContainer')"  style="margin-left: 10px;">
+                        📅 View Monthly Chart
+                    </button>
+                    </div>
+
                 <div class="loading" id="loading">
-                    <div class="spinner"></div>
-                    <p style="margin-top: 10px; color: #666;">Processing receipt...</p>
-                </div>
-                
-                <div class="error" id="error"></div>
-                
-                <div class="result" id="result">
-                    <h3>✅ Receipt Processed Successfully</h3>
-                    <div class="receipt-info" id="receiptInfo"></div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="card" style="display: none;" id="summaryCard">
-            <h2 style="margin-bottom: 20px; color: #333;">📊 Receipts Summary</h2>
-            <div class="summary-stats" id="summaryStats"></div>
-            <div class="receipts-list" id="receiptsList"></div>
-        </div>
+        <div class="spinner"></div>
+        <p style="margin-top: 10px; color: #666;">Processing receipt...</p>
+      </div>
+
+      <div class="error" id="error"></div>
+      <div class="result" id="result">
+        <h3>Receipt Processed Successfully</h3>
+        <div class="receipt-info" id="receiptInfo"></div>
+      </div>
     </div>
 
-    <script src="/app.js"></script>
+    <!-- ALL-TIME STORE TOTALS -->
+    <div class="card" id="storeTotalsCard" style="display: none;">
+      <div style="margin-bottom: 15px;">
+        <button class="button secondary" onclick="showSection('uploadSection')" style="float: right;">
+          ← Back to Upload
+        </button>
+        <h2 style="color: #333; margin: 0;">Store Spending Totals</h2>
+      </div>
+      <div id="storeTotalsList" class="items-list"></div>
+      <canvas id="storePieChart" height="400" style="margin-top: 25px;"></canvas>
+    </div>
+
+    <!-- MONTHLY CHART -->
+    <div class="card" id="monthlyChartContainer" style="width: 100%; max-width: 700px; margin: 2rem auto; display: none; padding: 0; height: auto;">     
+    <div style="margin-bottom: 15px; text-align: center;">
+        <button class="button secondary" onclick="showSection('uploadSection')">
+        ← Back to Upload
+        </button>
+        <h3 id="monthlyTitle" style="display: inline-block; margin: 0 15px;">Monthly Spending</h3>
+    </div>
+
+    <div style="text-align: center; margin-bottom: 20px;">
+        <label>Year:</label>
+        <input type="number" id="yearInput" value="2025" style="width: 90px;">
+        <label style="margin-left: 10px;">Month:</label>
+        <select id="monthInput">
+        <option value="1">January</option>
+        <option value="2">February</option>
+        <option value="3">March</option>
+        <option value="4">April</option>
+        <option value="5">May</option>
+        <option value="6">June</option>
+        <option value="7">July</option>
+        <option value="8">August</option>
+        <option value="9">September</option>
+        <option value="10">October</option>
+        <option value="11">November</option>
+        <option value="12">December</option>
+        </select>
+        <button class="button secondary" onclick="viewMonthlyChart()" style="margin-left: 10px;">
+        Load Chart
+        </button>
+    </div>
+
+      <div id="monthlyTotalsList" style="background:#f9f9f9; padding:15px; border-radius:8px; margin:20px 0; font-family: monospace; font-size:1.1em;"></div>
+      <canvas id="monthlyPieChart" height="400"></canvas>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT.firebaseapp.com",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_PROJECT.appspot.com",
+        messagingSenderId: "YOUR_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const firestore = firebase.firestore();
+  </script>
+  <script src="/app.js"></script>
+
+  <!-- Simple show/hide logic -->
+  <script>
+    function showSection(sectionId) {
+      const sections = ['uploadSection', 'storeTotalsCard', 'monthlyChartContainer'];
+      sections.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = (id === sectionId) ? 'block' : 'none';
+      });
+
+      // Auto-load data when switching
+      if (sectionId === 'storeTotalsCard') loadStoreTotals();
+    }
+
+    // Load store totals on first open
+    document.addEventListener('DOMContentLoaded', () => {
+      showSection('uploadSection');
+    });
+  </script>
 </body>
 </html> 

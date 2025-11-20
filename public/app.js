@@ -49,6 +49,181 @@ async function getSummary() {
     showLoading(false);
   }
 }
+async function getMonthlyTotals(year, month) {
+  // month = 0 to 11 (January = 0)
+  const start = new Date(Date.UTC(year, month, 1, 0, 0, 0));        // UTC midnight
+  const end = new Date(Date.UTC(year, month + 1, 1, 0, 0, 0));      // next month
+
+  const snapshot = await firestore
+    .collection("receipts")
+    .where("date", ">=", start)
+    .where("date", "<", end)
+    .get();
+
+  console.log(`Querying ${year}-${String(month + 1).padStart(2, '0')}: found ${snapshot.size} receipts`);
+
+  const totals = {};
+
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    const store = data.storeName || 'Unknown Store';
+    const amount = parseFloat(String(data.total || 0).replace(/[$\,]/g, ''));
+
+    if (!isNaN(amount) && amount > 0) {
+      totals[store] = (totals[store] || 0) + amount;
+    }
+  });
+
+  return totals;
+}
+async function loadMonthlyPieChart(year, month) {
+  const totals = await getMonthlyTotals(year, month);
+
+  const stores = Object.keys(totals);
+  const values = Object.values(totals);
+
+  const grandTotal = values.reduce((a, b) => a + b, 0);
+
+  const percentages = values.map(v => (v / grandTotal) * 100);
+
+  return { stores, percentages };
+}
+window.loadStoreTotals = async function () {
+  try {
+    const res = await fetch('/api/store-totals');
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+
+    const stores = data.stores || [];
+    const listEl = document.getElementById('storeTotalsList');
+    const cardEl = document.getElementById('storeTotalsCard');
+
+    if (!stores.length) {
+      listEl.innerHTML = "<p>No store totals found.</p>";
+      cardEl.style.display = 'block';
+      return;
+    }
+
+    let html = `<h4 style="margin-bottom:10px;">Store Totals</h4>`;
+    stores.forEach(s => {
+      html += `
+        <div class="item">
+          <span>${s.store}</span>
+          <span><strong>$${s.totalSpent.toFixed(2)}</strong> (${s.percentOfTotal.toFixed(1)}%)</span>
+        </div>`;
+    });
+    listEl.innerHTML = html;
+
+    const labels = stores.map(s => s.store);
+    const percentages = stores.map(s => Number(s.percentOfTotal || 0));
+
+    if (window.storePieChart && typeof window.storePieChart.destroy === "function") {
+      window.storePieChart.destroy();
+    }
+
+    const ctx = document.getElementById('storePieChart').getContext('2d');
+
+    window.storePieChart = new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels,
+        datasets: [{ data: percentages }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom' } }
+      }
+    });
+
+    cardEl.style.display = 'block';
+    cardEl.scrollIntoView({ behavior: 'smooth' });
+
+  } catch (err) {
+    showError("Failed to load store totals: " + err.message);
+  }
+};
+// Keep a global chart reference
+let monthlyPieChart = null;
+async function viewMonthlyChart() {
+  const yearInput = document.getElementById('yearInput');
+  const monthInput = document.getElementById('monthInput');
+  const container = document.getElementById('monthlyChartContainer');
+  const listEl = document.getElementById('monthlyTotalsList');
+  const titleEl = document.getElementById('monthlyTitle');
+
+  // Parse year/month
+  let year = parseInt(yearInput.value);
+  let month = parseInt(monthInput.value);
+  if (isNaN(year) || isNaN(month) || month < 1 || month > 12) return;
+  month = month - 1;
+
+  const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  titleEl.textContent = `Monthly Spending – ${monthNames[month]} ${year}`;
+
+  listEl.innerHTML = 'Loading...';
+
+  try {
+    const totals = await getMonthlyTotals(year, month);
+    const stores = Object.keys(totals);
+    const amounts = Object.values(totals);
+    const grandTotal = amounts.reduce((a,b) => a + b, 0) || 0;
+
+    // Build list
+    if (grandTotal > 0) {
+      let html = '<strong>Store Totals</strong><br>';
+      Object.keys(totals).sort((a,b) => totals[b]-totals[a]).forEach(store => {
+        const amt = totals[store];
+        const pct = (amt / grandTotal) * 100;
+        html += `${store} <strong>$${amt.toFixed(2)}</strong> (${pct.toFixed(1)}%)<br>`;
+      });
+      listEl.innerHTML = html;
+    } else {
+      listEl.innerHTML = 'No receipts found for this month.';
+    }
+
+    const canvas = document.getElementById('monthlyPieChart');
+
+    // Destroy previous chart if it exists
+    if (monthlyPieChart) {
+      monthlyPieChart.destroy();
+      monthlyPieChart = null;
+    }
+
+    const ctx = canvas.getContext('2d');
+
+    const backgroundColors = stores.map((_, i) =>
+      `hsla(${(i * 360 / stores.length) + 30}, 70%, 60%, 0.9)`
+    );
+
+    monthlyPieChart = new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: stores,
+        datasets: [{
+          data: amounts,
+          backgroundColor: backgroundColors,
+          borderColor: '#fff',
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true, // natural height
+        plugins: { legend: { position: 'bottom' } }
+      }
+    });
+
+    // Show container after chart/list ready and scroll smoothly
+    container.style.display = 'block';
+    container.scrollIntoView({ behavior: 'smooth' });
+
+  } catch(err) {
+    console.error(err);
+    listEl.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
+  }
+}
+
+
 
 function displayReceipt(receipt) {
   const info = document.getElementById('receiptInfo');
