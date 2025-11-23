@@ -8,49 +8,63 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>📄 Expensifyr </h1>
-            <p>Upload receipts and track your expenses</p>
+    <div class="header">
+        <h1>📄 Expensifyr </h1>
+        <p>Upload receipts and track your expenses</p>
+    </div>
+    
+    <!-- ✅ ADDED id="uploadSection" -->
+    <div class="card" id="uploadSection">
+        <div class="upload-section">
+            <h2 style="margin-bottom: 20px; color: #333;">Upload Receipt</h2>
+            
+            <div class="file-input-wrapper">
+                <input type="file" id="receiptFile" accept="image/*">
+                <label for="receiptFile" class="file-label">
+                    📁 Choose Receipt Image
+                </label>
+            </div>
+            
+            <div class="file-name" id="fileName">No file chosen</div>
+            
+            <div style="margin-top: 20px;">
+                <button class="button" id="uploadBtn" onclick="uploadReceipt()" disabled>
+                    🚀 Upload & Scan
+                </button>
+                <button class="button secondary" onclick="getSummary()">
+                    📊 View Summary
+                </button>
+                <button class="button secondary" onclick="showSection('storeTotalsCard')">
+                    🏪 View Store Totals
+                </button>
+                <button class="button secondary" onclick="showSection('monthlyChartContainer')" style="margin-left: 10px;">
+                    📅 View Monthly Chart
+                </button>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p style="margin-top: 10px; color: #666;">Processing receipt...</p>
+            </div>
+
+            <div class="error" id="error"></div>
+            <div class="result" id="result">
+                <h3>Receipt Processed Successfully</h3>
+                <div class="receipt-info" id="receiptInfo"></div>
+            </div>
         </div>
-        
-        <div class="card">
-            <div class="upload-section">
-                <h2 style="margin-bottom: 20px; color: #333;">Upload Receipt</h2>
-                
-                <div class="file-input-wrapper">
-                    <input type="file" id="receiptFile" accept="image/*">
-                    <label for="receiptFile" class="file-label">
-                        📁 Choose Receipt Image
-                    </label>
-                </div>
-                
-                <div class="file-name" id="fileName">No file chosen</div>
-                
-                <div style="margin-top: 20px;">
-                    <button class="button" id="uploadBtn" onclick="uploadReceipt()" disabled>
-                        🚀 Upload & Scan
-                    </button>
-                    <button class="button secondary" onclick="getSummary()">
-                        📊 View Summary
-                    </button>
-                    <button class="button secondary" onclick="showSection('storeTotalsCard')">
-                        🏪 View Store Totals
-                    </button>
-                    <button class="button secondary" onclick="showSection('monthlyChartContainer')"  style="margin-left: 10px;">
-                        📅 View Monthly Chart
-                    </button>
-                    </div>
+    </div>
 
-                <div class="loading" id="loading">
-        <div class="spinner"></div>
-        <p style="margin-top: 10px; color: #666;">Processing receipt...</p>
-      </div>
-
-      <div class="error" id="error"></div>
-      <div class="result" id="result">
-        <h3>Receipt Processed Successfully</h3>
-        <div class="receipt-info" id="receiptInfo"></div>
-      </div>
+    <!-- ✅ ADDED: Summary Card with all required elements -->
+    <div class="card" id="summaryCard" style="display: none;">
+        <div style="margin-bottom: 15px;">
+            <button class="button secondary" onclick="showSection('uploadSection')" style="float: right;">
+                ← Back to Upload
+            </button>
+            <h2 style="color: #333; margin: 0;">Expense Summary</h2>
+        </div>
+        <div id="summaryStats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;"></div>
+        <div id="receiptsList"></div>
     </div>
 
     <!-- ALL-TIME STORE TOTALS -->
