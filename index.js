@@ -23,6 +23,31 @@ global.FieldValue = FieldValue;
 app.use(express.json());
 app.use(express.static('public'));
 
+function parseReceiptDate(dateString) {
+  if (!dateString) return admin.firestore.Timestamp.now();
+  
+  // Try MM/DD/YY or MM/DD/YYYY format
+  const match = dateString.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if (match) {
+    let [, month, day, year] = match;
+    
+    // Convert 2-digit year to 4-digit
+    if (year.length === 2) {
+      year = parseInt(year) < 50 ? `20${year}` : `19${year}`;
+    }
+    
+    // Create date (months are 0-indexed in JavaScript)
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    
+    if (!isNaN(date.getTime())) {
+      return admin.firestore.Timestamp.fromDate(date);
+    }
+  }
+  
+  // Fallback to current time
+  return admin.firestore.Timestamp.now();
+}
+
 async function extractReceiptUsingLayout(imagePath) {
   try {
     const [result] = await visionClient.documentTextDetection(imagePath);
@@ -330,16 +355,7 @@ app.post('/upload-receipt', upload.single('receipt'), async (req, res) => {
       return res.status(400).json({ error: 'Could not extract receipt data' });
     }
 
-    let receiptDateTimestamp;
-    if (receiptData.date) {
-      // Handle formats like "10/25/2025" or "2025-11-19"
-      const parsed = new Date(receiptData.date);
-      receiptDateTimestamp = isNaN(parsed.getTime()) 
-        ? admin.firestore.Timestamp.now() 
-        : admin.firestore.Timestamp.fromDate(parsed);
-    } else {
-      receiptDateTimestamp = admin.firestore.Timestamp.now();
-    }
+    const receiptDateTimestamp = parseReceiptDate(receiptData.date);
 
     const docRef = await firestore.collection('receipts').add({
       ...receiptData,
