@@ -248,10 +248,19 @@ function displayReceipt(receipt) {
 }
 
 function displaySummary(receipts) {
-  if (!receipts || receipts.length === 0) { showError('No receipts found. Upload some receipts first!'); return; }
+  if (!receipts || receipts.length === 0) { 
+    showError('No receipts found. Upload some receipts first!'); 
+    return; 
+  }
+  
   let totalSpent = 0, totalTax = 0;
   const stores = new Set();
-  receipts.forEach(r => { if (r.total) totalSpent += parseFloat(r.total); if (r.tax) totalTax += parseFloat(r.tax); if (r.storeName) stores.add(r.storeName); });
+  
+  receipts.forEach(r => { 
+    if (r.total) totalSpent += parseFloat(r.total); 
+    if (r.tax) totalTax += parseFloat(r.tax); 
+    if (r.storeName) stores.add(r.storeName); 
+  });
 
   const statsHtml = `
     <div class="stat-card"><h4>Total Receipts</h4><div class="value">${receipts.length}</div></div>
@@ -262,8 +271,45 @@ function displaySummary(receipts) {
   document.getElementById('summaryStats').innerHTML = statsHtml;
 
   let listHtml = '<h3 style="margin-top:30px;margin-bottom:15px;">All Receipts</h3>';
+  
   receipts.forEach(receipt => {
-    listHtml += `<div class="receipt-item"><h4>${receipt.storeName}</h4><p><strong>Date:</strong> ${receipt.date || 'Unknown'}</p><p><strong>Total:</strong> $${receipt.total || '0.00'}</p><p><strong>Items:</strong> ${receipt.items ? receipt.items.length : 0}</p></div>`;
+    // ✅ FIX: Handle different date formats
+    let displayDate = 'Unknown';
+    
+    if (receipt.dateString) {
+      // Use the original date string if available
+      displayDate = receipt.dateString;
+    } else if (receipt.date) {
+      // Handle Firestore Timestamp objects
+      if (receipt.date.toDate && typeof receipt.date.toDate === 'function') {
+        // It's a Firestore Timestamp
+        const dateObj = receipt.date.toDate();
+        displayDate = dateObj.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        });
+      } else if (receipt.date.seconds) {
+        // It's a Firestore Timestamp in plain object form
+        const dateObj = new Date(receipt.date.seconds * 1000);
+        displayDate = dateObj.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        });
+      } else if (typeof receipt.date === 'string') {
+        // It's already a string
+        displayDate = receipt.date;
+      }
+    }
+    
+    listHtml += `
+      <div class="receipt-item">
+        <h4>${receipt.storeName}</h4>
+        <p><strong>Date:</strong> ${displayDate}</p>
+        <p><strong>Total:</strong> $${receipt.total || '0.00'}</p>
+        <p><strong>Items:</strong> ${receipt.items ? receipt.items.length : 0}</p>
+      </div>`;
   });
   document.getElementById('receiptsList').innerHTML = listHtml;
   document.getElementById('summaryCard').style.display = 'block';
