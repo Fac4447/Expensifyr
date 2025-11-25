@@ -304,11 +304,12 @@ function displaySummary(receipts) {
     }
     
     listHtml += `
-      <div class="receipt-item">
-        <h4>${receipt.storeName}</h4>
+      <div class="receipt-item" onclick="toggleReceiptItems('${receipt.id}')" style="cursor:pointer;">
+        <h4>${receipt.storeName} <small style="font-weight:normal; color:#666; margin-left:8px;">(click to view items)</small></h4>
         <p><strong>Date:</strong> ${displayDate}</p>
         <p><strong>Total:</strong> $${receipt.total || '0.00'}</p>
         <p><strong>Items:</strong> ${receipt.items ? receipt.items.length : 0}</p>
+        <div id="items-${receipt.id}" class="items-container" style="display:none; margin-top:10px;"></div>
       </div>`;
   });
   document.getElementById('receiptsList').innerHTML = listHtml;
@@ -332,4 +333,44 @@ function hideError() {
 
 function hideResult() { 
   document.getElementById('result').classList.remove('show'); 
+}
+
+async function toggleReceiptItems(id) {
+  const containerId = `items-${id}`;
+  const itemsEl = document.getElementById(containerId);
+  if (!itemsEl) return;
+
+  // If it already has children (loaded), just toggle visibility
+  if (itemsEl.innerHTML && itemsEl.innerHTML.trim().length > 0) {
+    itemsEl.style.display = itemsEl.style.display === 'none' ? 'block' : 'none';
+    return;
+  }
+
+  // Show a loading placeholder
+  itemsEl.style.display = 'block';
+  itemsEl.innerHTML = '<p style="color:#666;">Loading items...</p>';
+
+  try {
+    const res = await fetch(`/receipts/${encodeURIComponent(id)}`);
+    if (!res.ok) {
+      const errText = await res.text();
+      itemsEl.innerHTML = `<p style="color:red;">Failed to load receipt: ${res.status} ${errText}</p>`;
+      return;
+    }
+    const receipt = await res.json();
+    let html = '<div class="items-list"><h4 style="margin-bottom:10px;">Items</h4>';
+    if (receipt.items && receipt.items.length) {
+      receipt.items.forEach(it => {
+        html += `<div class="item"><span>${it.name}</span><span><strong>$${it.price}</strong></span></div>`;
+      });
+      html += `<div style="padding:10px; border-top:1px dashed #ddd; font-size:0.95em; color:#444;"><strong>Tax:</strong> $${receipt.tax || '0.00'} &nbsp; <strong>Total:</strong> $${receipt.total || '0.00'}</div>`;
+    } else {
+      html += '<p style="color:#666;">No items found for this receipt.</p>';
+    }
+    html += '</div>';
+
+    itemsEl.innerHTML = html;
+  } catch (err) {
+    itemsEl.innerHTML = `<p style="color:red;">Error loading receipt: ${err.message}</p>`;
+  }
 }
