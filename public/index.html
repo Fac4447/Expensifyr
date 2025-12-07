@@ -136,7 +136,7 @@
   <!-- Simple show/hide logic -->
   <script>
     function showSection(sectionId) {
-      const sections = ['uploadSection', 'storeTotalsCard', 'monthlyChartContainer'];
+      const sections = ['uploadSection', 'summaryCard', 'storeTotalsCard', 'monthlyChartContainer'];
       sections.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = (id === sectionId) ? 'block' : 'none';
