@@ -1,7 +1,6 @@
 const fileInput = document.getElementById('receiptFile');
 const fileName = document.getElementById('fileName');
 const uploadBtn = document.getElementById('uploadBtn');
-const summaryBtn = document.getElementById('summaryBtn');
 
 fileInput.addEventListener('change', (e) => {
   if (e.target.files.length > 0) {
@@ -43,12 +42,14 @@ async function getSummary() {
     const response = await fetch('/receipts?userId=demo-user');
     const data = await response.json();
     displaySummary(data.receipts);
+    showSection('summaryCard');
   } catch (err) {
     showError('Failed to load summary: ' + err.message);
   } finally {
     showLoading(false);
   }
 }
+
 async function getMonthlyTotals(year, month) {
   // month = 0 to 11 (January = 0)
   const start = new Date(Date.UTC(year, month, 1, 0, 0, 0));        // UTC midnight
@@ -76,18 +77,7 @@ async function getMonthlyTotals(year, month) {
 
   return totals;
 }
-async function loadMonthlyPieChart(year, month) {
-  const totals = await getMonthlyTotals(year, month);
 
-  const stores = Object.keys(totals);
-  const values = Object.values(totals);
-
-  const grandTotal = values.reduce((a, b) => a + b, 0);
-
-  const percentages = values.map(v => (v / grandTotal) * 100);
-
-  return { stores, percentages };
-}
 window.loadStoreTotals = async function () {
   try {
     const res = await fetch('/api/store-totals');
@@ -142,8 +132,9 @@ window.loadStoreTotals = async function () {
     showError("Failed to load store totals: " + err.message);
   }
 };
-// Keep a global chart reference
+
 let monthlyPieChart = null;
+
 async function viewMonthlyChart() {
   const yearInput = document.getElementById('yearInput');
   const monthInput = document.getElementById('monthInput');
@@ -151,7 +142,6 @@ async function viewMonthlyChart() {
   const listEl = document.getElementById('monthlyTotalsList');
   const titleEl = document.getElementById('monthlyTitle');
 
-  // Parse year/month
   let year = parseInt(yearInput.value);
   let month = parseInt(monthInput.value);
   if (isNaN(year) || isNaN(month) || month < 1 || month > 12) return;
@@ -168,7 +158,6 @@ async function viewMonthlyChart() {
     const amounts = Object.values(totals);
     const grandTotal = amounts.reduce((a,b) => a + b, 0) || 0;
 
-    // Build list
     if (grandTotal > 0) {
       let html = '<strong>Store Totals</strong><br>';
       Object.keys(totals).sort((a,b) => totals[b]-totals[a]).forEach(store => {
@@ -183,7 +172,6 @@ async function viewMonthlyChart() {
 
     const canvas = document.getElementById('monthlyPieChart');
 
-    // Destroy previous chart if it exists
     if (monthlyPieChart) {
       monthlyPieChart.destroy();
       monthlyPieChart = null;
@@ -208,12 +196,11 @@ async function viewMonthlyChart() {
       },
       options: {
         responsive: true,
-        maintainAspectRatio: true, // natural height
+        maintainAspectRatio: true,
         plugins: { legend: { position: 'bottom' } }
       }
     });
 
-    // Show container after chart/list ready and scroll smoothly
     container.style.display = 'block';
     container.scrollIntoView({ behavior: 'smooth' });
 
@@ -222,8 +209,6 @@ async function viewMonthlyChart() {
     listEl.innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
   }
 }
-
-
 
 function displayReceipt(receipt) {
   const info = document.getElementById('receiptInfo');
@@ -273,16 +258,12 @@ function displaySummary(receipts) {
   let listHtml = '<h3 style="margin-top:30px;margin-bottom:15px;">All Receipts</h3>';
   
   receipts.forEach(receipt => {
-    // ✅ FIX: Handle different date formats
     let displayDate = 'Unknown';
     
     if (receipt.dateString) {
-      // Use the original date string if available
       displayDate = receipt.dateString;
     } else if (receipt.date) {
-      // Handle Firestore Timestamp objects
       if (receipt.date.toDate && typeof receipt.date.toDate === 'function') {
-        // It's a Firestore Timestamp
         const dateObj = receipt.date.toDate();
         displayDate = dateObj.toLocaleDateString('en-US', {
           year: 'numeric',
@@ -290,7 +271,6 @@ function displaySummary(receipts) {
           day: '2-digit'
         });
       } else if (receipt.date.seconds) {
-        // It's a Firestore Timestamp in plain object form
         const dateObj = new Date(receipt.date.seconds * 1000);
         displayDate = dateObj.toLocaleDateString('en-US', {
           year: 'numeric',
@@ -298,7 +278,6 @@ function displaySummary(receipts) {
           day: '2-digit'
         });
       } else if (typeof receipt.date === 'string') {
-        // It's already a string
         displayDate = receipt.date;
       }
     }
@@ -313,8 +292,6 @@ function displaySummary(receipts) {
       </div>`;
   });
   document.getElementById('receiptsList').innerHTML = listHtml;
-  document.getElementById('summaryCard').style.display = 'block';
-  document.getElementById('summaryCard').scrollIntoView({ behavior: 'smooth' });
 }
 
 function showLoading(show) { 
@@ -340,13 +317,11 @@ async function toggleReceiptItems(id) {
   const itemsEl = document.getElementById(containerId);
   if (!itemsEl) return;
 
-  // If it already has children (loaded), just toggle visibility
   if (itemsEl.innerHTML && itemsEl.innerHTML.trim().length > 0) {
     itemsEl.style.display = itemsEl.style.display === 'none' ? 'block' : 'none';
     return;
   }
 
-  // Show a loading placeholder
   itemsEl.style.display = 'block';
   itemsEl.innerHTML = '<p style="color:#666;">Loading items...</p>';
 
